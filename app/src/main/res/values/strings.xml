@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">HomeApp</string>
+    <string name="start">TrackingStart</string>
+    <string name="stop">TrackingStop</string>
+    <string name="location">Location</string>
+    <string name="homeLocation">Home Location:</string>
+    <string name="clear">clear home</string>
+    <string name="buttonStart">start tracking location</string>
+    <string name="buttonSet">set location as home</string>
+</resources>
