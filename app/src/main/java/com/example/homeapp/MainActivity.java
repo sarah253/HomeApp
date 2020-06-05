@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.app.AlertDialog;
-import android.util.Log;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
@@ -111,12 +110,11 @@ public class MainActivity extends AppCompatActivity {
                         MY_PERMISSIONS_REQUEST);
             }
         } else {
-            //prepareToTrack();
             control_button.setText("stop tracking");
             locationTracker.startTracking();
         }
     }
-    
+
     @SuppressLint("SetTextI18n")
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -146,7 +144,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
 
     @SuppressLint("SetTextI18n")
     private void getLocation(){
@@ -216,8 +213,6 @@ public class MainActivity extends AppCompatActivity {
                 else {
                     set_button.setVisibility(View.INVISIBLE);
                 }
-            }else {
-                return;
             }
         }
     }

@@ -38,19 +38,15 @@ public class LocationTracker {
                 }
             }
         };
-
     }
 
     public void startTracking(){
         fusedLocationProviderClient.requestLocationUpdates(locationRequest,
                 locationCallback,Looper.getMainLooper());
-
-
     }
 
     public void stopTracking(){
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
-
     }
 
 }
