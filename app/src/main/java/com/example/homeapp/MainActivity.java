@@ -15,8 +15,10 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
@@ -34,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     Button clear_button;
     Button control_button;
     Button set_button;
+    Button set_sms;
+    Button test_sms;
     BroadcastReceiver broadcastReceiver;
     double latitude;
     double longitude;
@@ -41,7 +45,11 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences sharedPreferences;
     LocationInfo locationInfo;
     LocationTracker locationTracker;
-    int MY_PERMISSIONS_REQUEST = 123;
+    MyApp myApp;
+    String phone_number;
+    boolean track = false;
+    int MYLocation_PERMISSIONS_REQUEST = 123;
+    int MYSMS_PERMISSIONS_REQUEST = 1234;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,8 +63,12 @@ public class MainActivity extends AppCompatActivity {
         clear_button  = findViewById(R.id.clearButton);
         control_button = findViewById(R.id.buttonStart);
         set_button = findViewById(R.id.buttonSet);
+        set_sms = findViewById(R.id.buttonSetSMS);
+        test_sms = findViewById(R.id.buttonTstSms);
         sharedPreferences = getSharedPreferences("sp",MODE_PRIVATE);
         getLocation();
+        getNumber();
+        myApp = (MyApp) getApplicationContext();
         locationTracker = new LocationTracker(this);
         broadcastReceiver = new MyReceiver();
         IntentFilter filter = new IntentFilter("Location");
@@ -75,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
                     accuracy_text.setText("");
                     set_button.setVisibility(View.INVISIBLE);
                     locationTracker.stopTracking();
+                    track = false;
                 }
             }
         });
@@ -90,7 +103,18 @@ public class MainActivity extends AppCompatActivity {
                 deleteLocation();
             }
         });
-
+        set_sms.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getPermissionSms();
+            }
+        });
+        test_sms.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendMassage();
+            }
+        });
     }
 
     @SuppressLint("SetTextI18n")
@@ -102,16 +126,37 @@ public class MainActivity extends AppCompatActivity {
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
                 ActivityCompat.requestPermissions(MainActivity.this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST);
+                        MYLocation_PERMISSIONS_REQUEST);
             }
             else {
                 ActivityCompat.requestPermissions(MainActivity.this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST);
+                        MYLocation_PERMISSIONS_REQUEST);
             }
         } else {
             control_button.setText("stop tracking");
             locationTracker.startTracking();
+            track = true;
+        }
+    }
+
+    private void getPermissionSms(){
+        if (ContextCompat.checkSelfPermission(MainActivity.this,
+                Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                    Manifest.permission.SEND_SMS)) {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.SEND_SMS},
+                        MYSMS_PERMISSIONS_REQUEST);
+            }
+            else {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.SEND_SMS},
+                        MYSMS_PERMISSIONS_REQUEST);
+            }
+        } else {
+            getNumberFromUser();
         }
     }
 
@@ -120,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults){
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
-        if(requestCode == MY_PERMISSIONS_REQUEST){
+        if(requestCode == MYLocation_PERMISSIONS_REQUEST){
             if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 control_button.setText("stop tracking");
                 locationTracker.startTracking();
@@ -133,7 +178,30 @@ public class MainActivity extends AppCompatActivity {
                             public void onClick(DialogInterface dialog, int which) {
                                 ActivityCompat.requestPermissions(MainActivity.this,
                                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                                        MY_PERMISSIONS_REQUEST);
+                                        MYLocation_PERMISSIONS_REQUEST);
+                            }
+                        }).setNegativeButton("Don't allow", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //do nothing
+                    }
+                }).create().show();
+            }
+        }
+        if(requestCode == MYSMS_PERMISSIONS_REQUEST){
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                getNumberFromUser();
+            }
+            else {
+                new AlertDialog.Builder(this).setTitle("Allow SMS Permission")
+                        .setMessage("we need to use SMS or the App cannot send sms to your phone")
+                        .setPositiveButton("Allow", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                ActivityCompat.requestPermissions(MainActivity.this,
+                                        new String[]{Manifest.permission.SEND_SMS},
+                                        MYSMS_PERMISSIONS_REQUEST);
                             }
                         }).setNegativeButton("Don't allow", new DialogInterface.OnClickListener() {
                     @Override
@@ -188,6 +256,62 @@ public class MainActivity extends AppCompatActivity {
         clear_button.setVisibility(View.INVISIBLE);
     }
 
+    private void getNumber(){
+        Gson gson = new Gson();
+        String savedNumber = sharedPreferences.getString("phone Number",null);
+        if (savedNumber == null){
+            phone_number = "";
+            return;
+        }
+        phone_number = gson.fromJson(savedNumber,String.class);
+        if (phone_number.equals("")){
+            return;
+        }
+        test_sms.setVisibility(View.VISIBLE);
+    }
+
+    private void saveNumber(){
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        Gson gson = new Gson();
+        String numberToSave = gson.toJson(phone_number);
+        editor.putString("phone Number",numberToSave);
+        editor.apply();
+        if(phone_number.equals("")){
+            test_sms.setVisibility(View.INVISIBLE);
+            return;
+        }
+        test_sms.setVisibility(View.VISIBLE);
+    }
+
+    private void getNumberFromUser(){
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        final EditText input_number = new EditText(this);
+        input_number.setText(phone_number);
+        input_number.setInputType(InputType.TYPE_CLASS_NUMBER);
+        dialog.setTitle("Phone Number").setView(input_number).setMessage("Enter Your number")
+                .setPositiveButton("Done", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        phone_number = input_number.getText().toString();
+                        saveNumber();
+                    }
+                }).setNegativeButton("Deny", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //do nothing
+            }
+        }).create().show();
+    }
+
+    private void sendMassage(){
+        Intent intent = new Intent();
+        intent.setAction("POST_PC.ACTION_SEND_SMS");
+        intent.putExtra(myApp.localReceiver.PHONE_KEY, phone_number);
+        intent.putExtra(myApp.localReceiver.CONTENT_KEY,
+                "Honey I'm Home!");
+        myApp.sendBroadcast(intent);
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -200,7 +324,7 @@ public class MainActivity extends AppCompatActivity {
         @SuppressLint("SetTextI18n")
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (Objects.requireNonNull(intent.getAction()).equals("Location")){
+            if (Objects.requireNonNull(intent.getAction()).equals("Location") && track){
                 latitude = intent.getDoubleExtra("latitude",0);
                 latitude_text.setText("Latitude: " + latitude);
                 longitude = intent.getDoubleExtra("longitude",0);

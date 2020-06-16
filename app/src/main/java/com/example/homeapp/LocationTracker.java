@@ -1,5 +1,6 @@
 package com.example.homeapp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Looper;
@@ -9,17 +10,16 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-
 public class LocationTracker {
-    MainActivity mainActivity;
+    Context context;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
 
 
-    public LocationTracker(final MainActivity mainActivity){
-        this.mainActivity = mainActivity;
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(mainActivity);
+    public LocationTracker(final Context context){
+        this.context = context;
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context);
         locationRequest = LocationRequest.create().setInterval(5000).setFastestInterval(5000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationCallback = new LocationCallback(){
@@ -34,7 +34,7 @@ public class LocationTracker {
                     intent.putExtra("latitude",location.getLatitude());
                     intent.putExtra("longitude",location.getLongitude());
                     intent.putExtra("accuracy",location.getAccuracy());
-                    mainActivity.sendBroadcast(intent);
+                    context.sendBroadcast(intent);
                 }
             }
         };

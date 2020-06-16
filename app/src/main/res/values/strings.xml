@@ -7,4 +7,6 @@
     <string name="clear">clear home</string>
     <string name="buttonStart">start tracking location</string>
     <string name="buttonSet">set location as home</string>
+    <string name="setSms">set SMS phone number</string>
+    <string name="testSms">test SMS</string>
 </resources>
